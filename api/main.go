@@ -29,6 +29,9 @@ type Event struct {
 }
 
 func main() {
+	// Write logs to stdout so Cloud Logging classifies them as INFO, not ERROR
+	log.SetOutput(os.Stdout)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
