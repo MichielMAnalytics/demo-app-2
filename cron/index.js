@@ -12,6 +12,8 @@ import Redis from "ioredis";
 
 const { Pool } = pg;
 
+const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 const redis = new Redis(process.env.REDIS_URL);
 
@@ -77,11 +79,18 @@ async function run() {
 		console.log(`[${new Date().toISOString()}] Cron job complete`);
 	} catch (err) {
 		console.error(`[${new Date().toISOString()}] Cron job failed:`, err.message);
-		process.exitCode = 1;
-	} finally {
-		await db.end();
-		redis.disconnect();
 	}
 }
 
-run();
+// Run immediately on startup, then every 5 minutes
+console.log(`[${new Date().toISOString()}] Cron service starting (interval: ${INTERVAL_MS / 1000}s)`);
+await run();
+setInterval(run, INTERVAL_MS);
+
+// Graceful shutdown
+process.on("SIGTERM", async () => {
+	console.log(`[${new Date().toISOString()}] Shutting down...`);
+	await db.end();
+	redis.disconnect();
+	process.exit(0);
+});
